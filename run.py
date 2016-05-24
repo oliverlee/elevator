@@ -1,56 +1,50 @@
 #!/usr/bin/env python3
 
-from elevator import Direction, Elevator
+from ecs import Direction, ElevatorControlSystem
 
-e = Elevator()
-print("elevator status: ", e.status())
+class Rider(object):
+    def __init__(self, floor, goal):
+        self.floor = floor
+        self.goal = goal
 
-# Request elevator going up at floor 2, 3
-e.pickup_request(2, Direction.UP)
-e.pickup_request(3, Direction.UP)
+    @property
+    def direction(self):
+        return Direction((self.goal - self.floor)/abs(self.goal - self.floor))
 
-e.step()
-print("elevator status: ", e.status())
+    def can_board(self, elevator):
+        if ((elevator.direction == self.direction or
+             elevator.direction == Direction.NONE) and
+            (elevator.floor == self.floor)):
+            return True
 
-e.step()
-print("elevator status: ", e.status())
 
-e.step()
-print("elevator status: ", e.status())
+ecs = ElevatorControlSystem(4)
 
-e.step()
-print("elevator status: ", e.status())
+# 4 pickup requests at floors 1, 2, 3
+riders = [Rider(1, 5), Rider(2, 0), Rider(3, 5), Rider(1, -2)]
+# and a rider steps into elevator 0 at floor zero and goes towards floor -2
+ecs.elevators[0].pickup_request(-2, Direction.DOWN)
 
-# Request elevator going down at floor 4
-e.pickup_request(4, Direction.DOWN)
-e.step()
-print("elevator status: ", e.status())
+# riders request elevators
+for r in riders:
+    ecs.pickup_request(r.floor, r.direction)
+print("rider requests")
+ecs.print_status()
+print("")
 
-# Request to go to floor 0
-e.pickup_request(0, Direction.DOWN)
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
-
-e.step()
-print("elevator status: ", e.status())
+j = 0
+while True:
+    # if rider enters elevator, add the goal floor for that rider/elevator
+    for e in ecs.elevators:
+        for i in range(len(riders) - 1, -1, -1):
+            r = riders[i]
+            if r.can_board(e):
+                e.pickup_request(r.goal, r.direction)
+                riders.pop(i)
+    ecs.step()
+    print("step", j, "riders waiting: ", len(riders))
+    ecs.print_status()
+    print("")
+    j += 1
+    if all(e.direction == Direction.NONE for e in ecs.elevators):
+        break

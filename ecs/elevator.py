@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+__all__ = ['Direction', 'Elevator']
+
 import enum
 import bisect
 
@@ -52,11 +54,9 @@ class Elevator(object):
 
     def pickup_request(self, floor, direction):
         """Add floor to list of goal floors if not already included."""
-        if not (direction == Direction.DOWN or direction == Direction.UP):
-            raise ValueError('Direction must be Direction.DOWN or Direction.UP')
         if not self.__goal_floors:
             self.__goal_floors = [floor]
-            self.__direction = direction # set direction if stopped
+            self.__direction = direction
         else:
             index = bisect.bisect_left(self.__goal_floors, floor)
             try:
@@ -69,20 +69,23 @@ class Elevator(object):
         return
 
     def step(self):
-        if not self.__goal_floors:
-            self.__direction = Direction.NONE
-            return
-
+        """Simulate one step for the elevator. Servicing a floor takes one
+        step.
+        """
         # TODO: Don't search entire list each time
         index = bisect.bisect_left(self.__goal_floors, self.__floor)
 
         # if goal floor is reached, stop to service floor
+        stopped = False
         try:
             if self.__floor == self.__goal_floors[index]:
                 self.__goal_floors.pop(index)
-                return
+                stopped = True
         except IndexError:
             pass
+
+        if not self.__goal_floors:
+            self.__direction = Direction.NONE
 
         # check if current direction is valid and change if not
         if (self.__direction == Direction.UP and
@@ -91,5 +94,6 @@ class Elevator(object):
         if (self.__direction == Direction.DOWN and index == 0):
             self.__direction = Direction.UP
 
-        self.__floor += self.__direction
+        if not stopped:
+            self.__floor += self.__direction
         return
